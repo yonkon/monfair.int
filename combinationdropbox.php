@@ -25,15 +25,19 @@ class CombinationDropbox extends Module {
     'Left_and_Right_Full'   => 405,
     'Painted'               => 45
   );
-
   public static $attributeImpacts = array();
+  public static $wholesaleAttributes = array();
+  public static $wholesaleAttributeNamesSql = " 'Front_Wheel_Fender', 'Left_Side' , 'Right_Side' , 'Nose_Fairings' , 'Tail_Section' , 'Left_and_Right_Full'";
+  public static $wholesaleAttributeNames = array(
+    'Front_Wheel_Fender', 'Left_Side' , 'Right_Side' , 'Nose_Fairings' , 'Tail_Section' , 'Left_and_Right_Full'
+  );
 
 
   public function __construct()
   {
     $this->name = 'combinationdropbox';
     $this->tab = 'front_office_features';
-    $this->version = '0.4';
+    $this->version = '0.5';
     $this->author = 'Vladimir Sudarkov';
     $this->need_instance = 0;
     $this->ps_versions_compliancy = array('min' => '1.5', 'max' => '1.7');
@@ -83,7 +87,7 @@ class CombinationDropbox extends Module {
         return false;
       }
       $sql1 = "DROP TABLE IF EXISTS ps_combinationdropbox_product_attribute";
-      $sql2 = "CREATE TABLE ps_combinationdropbox_product_attribute SELECT * FROM ps_product_attribute)";
+      $sql2 = "CREATE TABLE ps_combinationdropbox_product_attribute SELECT * FROM ps_product_attribute";
       if (!(Db::getInstance()->execute($sql1) &&
           Db::getInstance()->execute($sql2))) {
         return false;
@@ -150,239 +154,234 @@ WHERE 1
       foreach($prodImpacts as $prodImpact) {
         $existed_attrs[$product['id_product']][$prodImpact['id_attribute_group']][$prodImpact['id_attribute']] = $prodImpact['id_attribute'];
         $existed_vals[$product['id_product']][$prodImpact['id_attribute_group']][$prodImpact['id_attribute']] = $prodImpact['price'];
-        self::$attributeImpacts[$prodImpact['id_attribute']] = $prodImpact['price'];
+        self::$attributeImpacts[$prodImpact['id_attribute']] = round($prodImpact['price'], 6);
       }}
 
-
-
-      if (true || count($combinationdropboxAll) != count(self::$productOptionsNames)) {
-        foreach (self::$productOptionsNames as $name => $pubname) {
-          $exists = false;
-          foreach ($combinationdropboxAll as $db_ag) {
-            if ($db_ag['name'] == $name) {
-              $exists = true;
-              break;
-            }
-          }
-          if ($exists) {
-            continue;
-          }
-
-          $attr_gr_id = Db::getInstance()->insert('attribute_group', array(
-            'id_attribute_group' => null,
-            'is_color_group' => 0,
-            'group_type' => 'radio',
-            'position' => 0
-          ));
-          if ($attr_gr_id) {
-            $attr_gr_id = Db::getInstance()->Insert_ID();
-            $comb_inserted['attribute_group'][] = array(
-              't' => 'attribute_group',
-              'n' => 'id_attribute_group',
-              'v' => $attr_gr_id
-            );
-          } else {
-            $res = false;
-          }
-
-          $attr_gr_lang_id = Db::getInstance()->insert('attribute_group_lang', array(
-            'id_attribute_group' => $attr_gr_id,
-            'id_lang' => 1,
-            'name' => $name,
-            'public_name' => $pubname
-          ));
-          if ($attr_gr_lang_id) {
-            $attr_gr_lang_id = Db::getInstance()->Insert_ID();
-            $comb_inserted['attribute_group_lang'][] = array(
-              't' => 'attribute_group_lang',
-              'n' => 'id_attribute_group',
-              'v' => $attr_gr_id
-            );
-          } else {
-            $res = false;
-          }
-
-          $attr_gr_shop_id = Db::getInstance()->insert('attribute_group_shop', array(
-            'id_attribute_group' => $attr_gr_id,
-            'id_shop' => 1
-          ));
-          if ($attr_gr_shop_id) {
-            $attr_gr_shop_id = Db::getInstance()->Insert_ID();
-            $comb_inserted['attribute_group_shop'][] = array(
-              't' => 'attribute_group_shop',
-              'n' => 'id_attribute_group',
-              'v' => $attr_gr_id
-            );
-          } else {
-            $res = false;
-          }
-
-          $attr_gr_content_item = array();
-          $attr_y_id = Db::getInstance()->insert('attribute', array(
-            'id_attribute' => null,
-            'id_attribute_group' => $attr_gr_id,
-            'color' => null,
-            'position' => 0
-          ));
-          if ($attr_y_id) {
-            $attr_y_id = Db::getInstance()->Insert_ID();
-            $attr_gr_content_item[$attr_y_id] = $attr_y_id;
-            $comb_inserted['attribute'][] = array(
-              't' => 'attribute',
-              'n' => 'id_attribute',
-              'v' => $attr_y_id
-            );
-          } else {
-            $res = false;
-          }
-
-          $attr_n_id = Db::getInstance()->insert('attribute', array(
-            'id_attribute' => null,
-            'id_attribute_group' => $attr_gr_id,
-            'color' => null,
-            'position' => 0
-          ));
-          if ($attr_n_id) {
-            $attr_n_id = Db::getInstance()->Insert_ID();
-            $attr_gr_content_item[$attr_n_id] = $attr_n_id;
-            $comb_inserted['attribute'][] = array(
-              't' => 'attribute',
-              'n' => 'id_attribute',
-              'v' => $attr_n_id
-            );
-          } else {
-            $res = false;
-          }
-
-          $attr_gr_content[] = $attr_gr_content_item;
-
-          $attr_shop_y_id = Db::getInstance()->insert('attribute_shop', array(
-            'id_attribute' => $attr_y_id,
-            'id_shop' => 1
-          ));
-          if ($attr_shop_y_id) {
-            $attr_shop_y_id = Db::getInstance()->Insert_ID();
-            $comb_inserted['attribute_shop'][] = array(
-              't' => 'attribute_shop',
-              'n' => 'id_attribute',
-              'v' => $attr_y_id
-            );
-          } else {
-            $res = false;
-          }
-
-          $attr_shop_n_id = Db::getInstance()->insert('attribute_shop', array(
-            'id_attribute' => $attr_n_id,
-            'id_shop' => 1
-          ));
-          if ($attr_shop_n_id) {
-            $attr_shop_n_id = Db::getInstance()->Insert_ID();
-            $comb_inserted['attribute_shop'][] = array(
-              't' => 'attribute_shop',
-              'n' => 'id_attribute',
-              'v' => $attr_n_id
-            );
-          } else {
-            $res = false;
-          }
-
-          $attr_lang_y_id = Db::getInstance()->insert('attribute_lang', array(
-            'id_attribute' => $attr_y_id,
-            'id_lang' => 1,
-            'name' => $name
-          ));
-          if ($attr_lang_y_id) {
-            $attr_lang_y_id = Db::getInstance()->Insert_ID();
-            $comb_inserted['attribute_lang'][] = array(
-              't' => 'attribute_lang',
-              'n' => 'id_attribute',
-              'v' => $attr_y_id
-            );
-          } else {
-            $res = false;
-          }
-
-          $attr_lang_n_id = Db::getInstance()->insert('attribute_lang', array(
-            'id_attribute' => $attr_n_id,
-            'id_lang' => 1,
-            'name' => 'No'
-          ));
-          if ($attr_lang_n_id) {
-            $attr_lang_n_id = Db::getInstance()->Insert_ID();
-            $comb_inserted['attribute_lang'][] = array(
-              't' => 'attribute_lang',
-              'n' => 'id_attribute',
-              'v' => $attr_n_id
-            );
-          } else {
-            $res = false;
-          }
-
-          $address = $this->context->shop->getAddress();
-
-
-          foreach ($productsAll as $product) {
-
-
-            $tax_manager = TaxManagerFactory::getManager($address, 1);
-            $product_tax_calculator = $tax_manager->getTaxCalculator();
-
-            $tax_excl = round($product_tax_calculator->removeTaxes(self::$productOptionsImpacts[$name]), 6);
-            $attr_impact_y_id = Db::getInstance()->insert('attribute_impact', array(
-              'id_attribute_impact' => null,
-              'id_product' => $product['id_product'],
-              'id_attribute' => $attr_y_id,
-              'weight' => 0,
-              'price' => $tax_excl
-            ));
-            if ($attr_impact_y_id) {
-              $attr_impact_y_id = Db::getInstance()->Insert_ID();
-              $comb_inserted['attribute_impact'][] = array(
-                't' => 'attribute_impact',
-                'n' => 'id_attribute_impact',
-                'v' => $attr_impact_y_id
-              );
-              self::$attributeImpacts[$attr_y_id] = $tax_excl;
-            }
-
-            $attr_impact_n_id = Db::getInstance()->insert('attribute_impact', array(
-              'id_attribute_impact' => null,
-              'id_product' => $product['id_product'],
-              'id_attribute' => $attr_n_id,
-              'weight' => 0,
-              'price' => 0
-            ));
-            if ($attr_impact_n_id) {
-              $attr_impact_n_id = Db::getInstance()->Insert_ID();
-              $comb_inserted['attribute_impact'][] = array(
-                't' => 'attribute_impact',
-                'n' => 'id_attribute_impact',
-                'v' => $attr_impact_n_id
-              );
-              self::$attributeImpacts[$attr_n_id] = 0;
-            }
+      foreach (self::$productOptionsNames as $name => $pubname) {
+        $exists = false;
+        foreach ($combinationdropboxAll as $db_ag) {
+          if ($db_ag['name'] == $name) {
+            $exists = true;
+            break;
           }
         }
-
-        foreach ($comb_inserted as $table => $rows) {
-          $vals = array();
-          foreach ($rows as $row) {
-            $vals[] = "(NULL, '{$table}' , '{$row['n']}', {$row['v']})";
-          }
-          $sql = "INSERT INTO `" . _DB_PREFIX_ . "combinationdropbox_inserts`(`id_combinationdropbox_insert`, `table`, `pk_name`, `pk_value`) VALUES " . join(', ', $vals);
-          Db::getInstance()->execute($sql);
+        if ($exists) {
+          continue;
         }
 
-        $combination_values = array();
-        $combinations = array_values(self::createCombinations($attr_gr_content));
-        $combinations = array_reverse($combinations);
-        $comb_combs = array();
-        foreach ($combinations as $i => $attrs) {
-          $combination_values[$i] = 0;
-          foreach ($attrs as $attr) {
-            $combination_values[$i] += self::$attributeImpacts[$attr];
+        $attr_gr_id = Db::getInstance()->insert('attribute_group', array(
+          'id_attribute_group' => null,
+          'is_color_group' => 0,
+          'group_type' => 'radio',
+          'position' => 0
+        ));
+        if ($attr_gr_id) {
+          $attr_gr_id = Db::getInstance()->Insert_ID();
+          $comb_inserted['attribute_group'][] = array(
+            't' => 'attribute_group',
+            'n' => 'id_attribute_group',
+            'v' => $attr_gr_id
+          );
+        } else {
+          $res = false;
+        }
+
+        $attr_gr_lang_id = Db::getInstance()->insert('attribute_group_lang', array(
+          'id_attribute_group' => $attr_gr_id,
+          'id_lang' => 1,
+          'name' => $name,
+          'public_name' => $pubname
+        ));
+        if ($attr_gr_lang_id) {
+          $attr_gr_lang_id = Db::getInstance()->Insert_ID();
+          $comb_inserted['attribute_group_lang'][] = array(
+            't' => 'attribute_group_lang',
+            'n' => 'id_attribute_group',
+            'v' => $attr_gr_id
+          );
+        } else {
+          $res = false;
+        }
+
+        $attr_gr_shop_id = Db::getInstance()->insert('attribute_group_shop', array(
+          'id_attribute_group' => $attr_gr_id,
+          'id_shop' => 1
+        ));
+        if ($attr_gr_shop_id) {
+          $attr_gr_shop_id = Db::getInstance()->Insert_ID();
+          $comb_inserted['attribute_group_shop'][] = array(
+            't' => 'attribute_group_shop',
+            'n' => 'id_attribute_group',
+            'v' => $attr_gr_id
+          );
+        } else {
+          $res = false;
+        }
+
+        $attr_gr_content_item = array();
+        $attr_y_id = Db::getInstance()->insert('attribute', array(
+          'id_attribute' => null,
+          'id_attribute_group' => $attr_gr_id,
+          'color' => null,
+          'position' => 0
+        ));
+        if ($attr_y_id) {
+          $attr_y_id = Db::getInstance()->Insert_ID();
+          $attr_gr_content_item[$attr_y_id] = $attr_y_id;
+          $comb_inserted['attribute'][] = array(
+            't' => 'attribute',
+            'n' => 'id_attribute',
+            'v' => $attr_y_id
+          );
+          if($name != 'Painted') {
+            self::$wholesaleAttributes[] = $attr_y_id;
           }
-          $comb_combs[] = "(
+        } else {
+          $res = false;
+        }
+
+        $attr_n_id = Db::getInstance()->insert('attribute', array(
+          'id_attribute' => null,
+          'id_attribute_group' => $attr_gr_id,
+          'color' => null,
+          'position' => 0
+        ));
+        if ($attr_n_id) {
+          $attr_n_id = Db::getInstance()->Insert_ID();
+          $attr_gr_content_item[$attr_n_id] = $attr_n_id;
+          $comb_inserted['attribute'][] = array(
+            't' => 'attribute',
+            'n' => 'id_attribute',
+            'v' => $attr_n_id
+          );
+        } else {
+          $res = false;
+        }
+
+        $attr_gr_content[] = $attr_gr_content_item;
+
+        $attr_shop_y_id = Db::getInstance()->insert('attribute_shop', array(
+          'id_attribute' => $attr_y_id,
+          'id_shop' => 1
+        ));
+        if ($attr_shop_y_id) {
+          $attr_shop_y_id = Db::getInstance()->Insert_ID();
+          $comb_inserted['attribute_shop'][] = array(
+            't' => 'attribute_shop',
+            'n' => 'id_attribute',
+            'v' => $attr_y_id
+          );
+        } else {
+          $res = false;
+        }
+
+        $attr_shop_n_id = Db::getInstance()->insert('attribute_shop', array(
+          'id_attribute' => $attr_n_id,
+          'id_shop' => 1
+        ));
+        if ($attr_shop_n_id) {
+          $attr_shop_n_id = Db::getInstance()->Insert_ID();
+          $comb_inserted['attribute_shop'][] = array(
+            't' => 'attribute_shop',
+            'n' => 'id_attribute',
+            'v' => $attr_n_id
+          );
+        } else {
+          $res = false;
+        }
+
+        $attr_lang_y_id = Db::getInstance()->insert('attribute_lang', array(
+          'id_attribute' => $attr_y_id,
+          'id_lang' => 1,
+          'name' => $name
+        ));
+        if ($attr_lang_y_id) {
+          $attr_lang_y_id = Db::getInstance()->Insert_ID();
+          $comb_inserted['attribute_lang'][] = array(
+            't' => 'attribute_lang',
+            'n' => 'id_attribute',
+            'v' => $attr_y_id
+          );
+        } else {
+          $res = false;
+        }
+
+        $attr_lang_n_id = Db::getInstance()->insert('attribute_lang', array(
+          'id_attribute' => $attr_n_id,
+          'id_lang' => 1,
+          'name' => 'No'
+        ));
+        if ($attr_lang_n_id) {
+          $attr_lang_n_id = Db::getInstance()->Insert_ID();
+          $comb_inserted['attribute_lang'][] = array(
+            't' => 'attribute_lang',
+            'n' => 'id_attribute',
+            'v' => $attr_n_id
+          );
+        } else {
+          $res = false;
+        }
+
+        $address = $this->context->shop->getAddress();
+        foreach ($productsAll as $product) {
+          $tax_manager = TaxManagerFactory::getManager($address, 1);
+          $product_tax_calculator = $tax_manager->getTaxCalculator();
+          $tax_excl = round($product_tax_calculator->removeTaxes(self::$productOptionsImpacts[$name]), 6);
+          $attr_impact_y_id = Db::getInstance()->insert('attribute_impact', array(
+            'id_attribute_impact' => null,
+            'id_product' => $product['id_product'],
+            'id_attribute' => $attr_y_id,
+            'weight' => 0,
+            'price' => $tax_excl
+          ));
+          if ($attr_impact_y_id) {
+            $attr_impact_y_id = Db::getInstance()->Insert_ID();
+            $comb_inserted['attribute_impact'][] = array(
+              't' => 'attribute_impact',
+              'n' => 'id_attribute_impact',
+              'v' => $attr_impact_y_id
+            );
+            self::$attributeImpacts[$attr_y_id] = $tax_excl;
+          }
+
+          $attr_impact_n_id = Db::getInstance()->insert('attribute_impact', array(
+            'id_attribute_impact' => null,
+            'id_product' => $product['id_product'],
+            'id_attribute' => $attr_n_id,
+            'weight' => 0,
+            'price' => 0
+          ));
+          if ($attr_impact_n_id) {
+            $attr_impact_n_id = Db::getInstance()->Insert_ID();
+            $comb_inserted['attribute_impact'][] = array(
+              't' => 'attribute_impact',
+              'n' => 'id_attribute_impact',
+              'v' => $attr_impact_n_id
+            );
+            self::$attributeImpacts[$attr_n_id] = 0;
+          }
+        }
+      }
+
+      foreach ($comb_inserted as $table => $rows) {
+        $vals = array();
+        foreach ($rows as $row) {
+          $vals[] = "(NULL, '{$table}' , '{$row['n']}', {$row['v']})";
+        }
+        $sql = "INSERT INTO `" . _DB_PREFIX_ . "combinationdropbox_inserts`(`id_combinationdropbox_insert`, `table`, `pk_name`, `pk_value`) VALUES " . join(', ', $vals);
+        Db::getInstance()->execute($sql);
+      }
+
+      $combination_values = array();
+      $combinations = array_values(self::createCombinations($attr_gr_content));
+      $combinations = array_reverse($combinations);
+      $comb_combs = array();
+      foreach ($combinations as $i => $attrs) {
+        $combination_values[$i] = 0;
+        foreach ($attrs as $attr) {
+          $combination_values[$i] += self::$attributeImpacts[$attr];
+        }
+        $comb_combs[] = "(
 NULL ,
 {$attrs[0]},
 {$attrs[1]},
@@ -393,66 +392,65 @@ NULL ,
 {$attrs[6]},
 {$combination_values[$i]}
 ) ";
-        }
-        $comb_comb_sql = "INSERT INTO `" . _DB_PREFIX_ . "combinationdropbox_combinations`(`id`, `a1`, `a2`, `a3`, `a4`, `a5`, `a6`, `a7`, `price`) VALUES " . join(', ', $comb_combs);
-        Db::getInstance()->execute($comb_comb_sql);
-        foreach ($productsAll as $product) {
+      }
+      $comb_comb_sql = "INSERT INTO `" . _DB_PREFIX_ . "combinationdropbox_combinations`(`id`, `a1`, `a2`, `a3`, `a4`, `a5`, `a6`, `a7`, `price`) VALUES " . join(', ', $comb_combs);
+      Db::getInstance()->execute($comb_comb_sql);
 
-          $combination_values = array();
-          $attr_gr_content_w_existed = empty($existed_attrs[$product['id_product']]) ?
-            $attr_gr_content :
-            array_merge($attr_gr_content, array_values($existed_attrs[$product['id_product']]) );
-          $combinations = array_values(self::createCombinations($attr_gr_content_w_existed));
-          $combinations = array_reverse($combinations);
-          foreach ($combinations as $i => $attrs) {
-            $combination_values[$i] = 0;
-            foreach ($attrs as $attr) {
-              $combination_values[$i] += self::$attributeImpacts[$attr];
-            }
+      foreach ($productsAll as $product) {
+        $combination_values = array();
+        $attr_gr_content_w_existed = empty($existed_attrs[$product['id_product']]) ?
+          $attr_gr_content :
+          array_merge($attr_gr_content, array_values($existed_attrs[$product['id_product']]) );
+        $combinations = array_values(self::createCombinations($attr_gr_content_w_existed));
+        $combinations = array_reverse($combinations);
+        foreach ($combinations as $i => $attrs) {
+          $combination_values[$i] = 0;
+          foreach ($attrs as $attr) {
+            $combination_values[$i] += self::$attributeImpacts[$attr];
           }
+        }
 
-          $values = array();
-          $zeroCombIndex = false;
-          foreach ($combinations as $c => $combination) {
-            $combination_value = $combination_values[$c];
-            if ($combination_value == 0) {
-              $zeroCombIndex = $c;
-            }
-            $values[] = self::addAttribute($product, $combination, $combination_value);
+        $values = array();
+        $zeroCombIndex = false;
+        foreach ($combinations as $c => $combination) {
+          $combination_value = $combination_values[$c];
+          if ($combination_value == 0) {
+            $zeroCombIndex = $c;
           }
-          $productObj = new Product($product['id_product']);
-          $productObj->generateMultipleCombinations($values, $combinations);
-
+          $values[] = self::addAttribute($product, $combination, $combination_value);
         }
+        $productObj = new Product($product['id_product']);
+        $productObj->generateMultipleCombinations($values, $combinations);
+
+      }
 
 
-        //Setting default combinations
-        $zeroCombs = Db::getInstance()->executeS("SELECT * FROM " . _DB_PREFIX_ . "product_attribute WHERE price=0");
-        foreach ($zeroCombs as $zeroComb) {
-          Db::getInstance()->update('product_shop', array(
-            'cache_default_attribute' => $zeroComb['id_product_attribute'],
-          ), 'id_product = ' . (int)$zeroComb['id_product'] . Shop::addSqlRestriction());
+      //Setting default combinations
+      $zeroCombs = Db::getInstance()->executeS("SELECT * FROM ps_product_attribute GROUP BY id_product HAVING wholesale_price=0 ORDER BY price DESC");
+      foreach ($zeroCombs as $zeroComb) {
+        Db::getInstance()->update('product_shop', array(
+          'cache_default_attribute' => $zeroComb['id_product_attribute'],
+        ), 'id_product = ' . (int)$zeroComb['id_product'] . Shop::addSqlRestriction());
 
-          Db::getInstance()->update('product', array(
-            'cache_default_attribute' => $zeroComb['id_product_attribute'],
-          ), 'id_product = ' . (int)$zeroComb['id_product']);
+        Db::getInstance()->update('product', array(
+          'cache_default_attribute' => $zeroComb['id_product_attribute'],
+        ), 'id_product = ' . (int)$zeroComb['id_product']);
 
-          Db::getInstance()->update('product_attribute', array(
-            'default_on' => 0,
-          ), 'default_on=1 AND id_product = ' . (int)$zeroComb['id_product']);
+        Db::getInstance()->update('product_attribute', array(
+          'default_on' => 0,
+        ), 'default_on=1 AND id_product = ' . (int)$zeroComb['id_product']);
 
-          Db::getInstance()->update('product_attribute', array(
-            'default_on' => 1,
-          ), 'id_product_attribute = ' . $zeroComb['id_product_attribute'] . ' AND id_product = ' . (int)$zeroComb['id_product']);
+        Db::getInstance()->update('product_attribute', array(
+          'default_on' => 1,
+        ), 'id_product_attribute = ' . $zeroComb['id_product_attribute'] . ' AND id_product = ' . (int)$zeroComb['id_product']);
 
-          Db::getInstance()->update('product_attribute_shop', array(
-            'default_on' => 0,
-          ), 'default_on=1 AND id_product = ' . (int)$zeroComb['id_product']);
+        Db::getInstance()->update('product_attribute_shop', array(
+          'default_on' => 0,
+        ), 'default_on=1 AND id_product = ' . (int)$zeroComb['id_product']);
 
-          Db::getInstance()->update('product_attribute_shop', array(
-            'default_on' => 1,
-          ), 'id_product_attribute = ' . $zeroComb['id_product_attribute'] . ' AND id_product = ' . (int)$zeroComb['id_product']);
-        }
+        Db::getInstance()->update('product_attribute_shop', array(
+          'default_on' => 1,
+        ), 'id_product_attribute = ' . $zeroComb['id_product_attribute'] . ' AND id_product = ' . (int)$zeroComb['id_product']);
       }
 
 
@@ -529,28 +527,7 @@ NULL ,
           $combination[] = $cur_comb['a' . $i];
         }
         $combinations_clear[] = $combination;
-        $values[] = self::addAttribute(array('id_product' => $id_product), $combination, $combination_value);
-      }
-
-      if(false && $zeroCombIndex !== false ) {
-        $zeroVal = array($values[$zeroCombIndex]);
-        $zeroComb = array($combinations_clear[$zeroCombIndex]);
-        foreach($values as $c => $value) {
-          if($c != $zeroCombIndex) {
-            $zeroVal[] = $value;
-          }
-        }
-        foreach($combinations_clear as $c => $comb) {
-          if($c != $zeroCombIndex) {
-            $zeroComb[] = $comb;
-          }
-        }
-        $values = $zeroVal;
-        $combinations_clear = $zeroComb;
-//        unset($values[$zeroCombIndex]);
-//        $values = array_merge($zeroVal, $values);
-//        unset($combinations_clear[$zeroCombIndex]);
-//        $combinations_clear = array_merge($zeroComb, $combinations_clear);
+        $values[] = self::addAttribute($product, $combination, $combination_value);
       }
 
       $attrs = Db::getInstance()->executeS(
@@ -607,8 +584,6 @@ JOIN ps_attribute_group_lang agl
             self::$attributeImpacts[$attr['id_attribute']] = 0;
           }
         }
-
-
       }
 
 //    $productObj = new Product($product['id_product']);
@@ -776,7 +751,6 @@ JOIN ps_attribute_group_lang agl
       return '';
     }
 
-
     $combinationdropboxAll = Db::getInstance()->executeS(
       "SELECT ag.`id_attribute_group`,
 	ag.public_name as group_lang,
@@ -871,13 +845,30 @@ JOIN ps_attribute_impact ai
     return $res;
   }
 
+  /**
+   * @param $product array Must contain id_product AND price
+   * @param $attributes array id_attributes, that combination contain
+   * @param int $price float Combination price impact
+   * @param int $weight float Combination weight impact
+   * @return array Values for generateMultipleCombinations
+   */
   protected static function addAttribute($product, $attributes, $price = 0, $weight = 0)
   {
+    $wholesale_ids = self::getWholesaleAttributes();
+    $is_wholesale = false;
+    foreach($attributes as $pa_id) {
+      if(in_array($pa_id, $wholesale_ids)) {
+        $is_wholesale = true;
+        break;
+      }
+    }
     if ($product['id_product'])
     {
-      return array(
+      //TODO check if need to add taxes for product price
+      $price = $is_wholesale ? (float)$price - (float)$product['price'] : (float)$price ;
+      $result =  array(
         'id_product' => (int)$product['id_product'],
-        'price' => (float)$price,
+        'price' => $price,
         'weight' => (float)$weight,
         'ecotax' => 0,
         'quantity' => (int)Tools::getValue('quantity'),
@@ -885,6 +876,8 @@ JOIN ps_attribute_impact ai
         'default_on' => 0,
         'available_date' => '0000-00-00'
       );
+
+      return $result;
     }
     return array();
   }
@@ -924,6 +917,32 @@ JOIN ps_attribute_group_lang al
     return $impact;
   }
 
-}
+  public static function getWholesaleAttributes()
+  {
+    if(!empty(self::$wholesaleAttributes)) {
+      return self::$wholesaleAttributes;
+    }
 
-?>
+    $wsa = Db::getInstance()->executeS(
+"SELECT a.id_attribute, g.id_attribute_group, gl.name AS `group`, gl.public_name AS `name`, al.name as `value`
+ FROM ps_attribute a
+JOIN ps_attribute_lang al
+  ON al.id_attribute = a.id_attribute
+  AND al.id_lang = 1
+  AND al.name != 'No'
+JOIN ps_attribute_group g
+  ON g.id_attribute_group = a.id_attribute_group
+JOIN ps_attribute_group_lang gl
+  ON g.id_attribute_group = gl.id_attribute_group
+  AND gl.id_lang = 1
+WHERE gl.name IN ({self::$wholesaleAttributeNamesSql})
+"
+    );
+    $result = array();
+    foreach($wsa as $row) {
+      $result[] = $row['id_attribute'];
+    }
+    return $result;
+  }
+
+}

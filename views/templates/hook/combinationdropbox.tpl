@@ -21,7 +21,7 @@
     <div class="dropbox">
       <ul>
         <li class="selected" data-group="{$combinationdropbox.painted.gr}" data-attr="{$combinationdropbox.painted['No'].attr}">Unpainted</li>
-        <li  data-group="{$combinationdropbox.painted.gr}" data-attr="{$combinationdropbox.painted['Yes'].attr}">Painted<span class="price">{$combinationdropbox.painted.price}$</span> </li>
+        <li  data-group="{$combinationdropbox.painted.gr}" data-attr="{$combinationdropbox.painted['Painted'].attr}">Painted<span class="price">{$combinationdropbox.painted.price}$</span> </li>
       </ul>
       <div class="mid-divider"></div>
       <div class="helper_text">Please choose either painted or unpainted, if painted is chosen, please send good quality photos of the design that you require to the email address below with your Order ID in the description.</div>

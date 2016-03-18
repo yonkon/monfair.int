@@ -1,19 +1,6 @@
 <?php
 
 
-
-/**
-
- * Created by PhpStorm.
-
- * User: X-iLeR
-
- * Date: 16.03.2016
-
- * Time: 5:42
-
- */
-
 class CartController extends CartControllerCore
 
 {
