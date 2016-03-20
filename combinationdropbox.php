@@ -4,7 +4,10 @@ if(!defined('_PS_VERSION_') )
 /*
  * updated 11.03.2016
  */
+ini_set('display_errors',1);
+error_reporting(E_ALL|E_STRICT);
 ini_set('max_execution_time', 360000);
+
 class CombinationDropbox extends Module {
 
   public static $productOptionsNames = array(
@@ -39,7 +42,7 @@ class CombinationDropbox extends Module {
   {
     $this->name = 'combinationdropbox';
     $this->tab = 'front_office_features';
-    $this->version = '0.6';
+    $this->version = '0.7';
     $this->author = 'Vladimir Sudarkov';
     $this->need_instance = 0;
     $this->ps_versions_compliancy = array('min' => '1.5', 'max' => '1.7');
@@ -162,7 +165,7 @@ WHERE 1
             break;
           }
         }
-        if ($exists) {
+        if (false && $exists) {
           continue;
         }
 
@@ -324,7 +327,7 @@ WHERE 1
         foreach ($productsAll as $product) {
           $tax_manager = TaxManagerFactory::getManager($address, 1);
           $product_tax_calculator = $tax_manager->getTaxCalculator();
-          $tax_excl = round($product_tax_calculator->removeTaxes(self::$productOptionsImpacts[$name]), 6);
+          $tax_excl = round($product_tax_calculator->removeTaxes(self::$productOptionsImpacts[$name]), 5);
           $attr_impact_y_id = Db::getInstance()->insert('attribute_impact', array(
             'id_attribute_impact' => null,
             'id_product' => $product['id_product'],
@@ -378,6 +381,7 @@ WHERE 1
         $combination_values[$i] = 0;
         foreach ($attrs as $attr) {
           $combination_values[$i] += self::$attributeImpacts[$attr];
+          $combination_values[$i] = number_format($combination_values[$i], 4, '.', '');
         }
         $comb_combs[] = "(
 NULL ,
@@ -405,6 +409,7 @@ NULL ,
           $combination_values[$i] = 0;
           foreach ($attrs as $attr) {
             $combination_values[$i] += self::$attributeImpacts[$attr];
+            $combination_values[$i] = round($combination_values[$i], 3);
           }
         }
 
@@ -418,7 +423,9 @@ NULL ,
           $values[] = self::addAttribute($product, $combination, $combination_value);
         }
         $productObj = new Product($product['id_product']);
-        $productObj->generateMultipleCombinations($values, $combinations);
+        if($productObj->id) {
+          $productObj->generateMultipleCombinations($values, $combinations);
+        }
       }
 
       //TODO check if nessesary to remain old combinations
@@ -428,7 +435,7 @@ NULL ,
 
 
       //Setting default combinations
-      $zeroCombs = Db::getInstance()->executeS("SELECT * FROM ps_product_attribute GROUP BY id_product ORDER BY price ASC");
+      $zeroCombs = Db::getInstance()->executeS("SELECT * FROM ps_product_attribute GROUP BY id_product HAVING price >= 0 ORDER BY price ASC");
       foreach ($zeroCombs as $zeroComb) {
         Db::getInstance()->update('product_shop', array(
           'cache_default_attribute' => $zeroComb['id_product_attribute'],
@@ -462,7 +469,8 @@ NULL ,
         return false;
       }
     } catch (Exception $e) {
-      if(Tools::getValue('debug')) {
+      $dbg = Tools::getValue('debug');
+      if($dbg) {
         echo $e->getMessage();
       }
       $this->uninstall();
@@ -487,7 +495,8 @@ NULL ,
         $inserted_attr_ids[] = $row['pk_value'];
       }
     }
-    $inserted_product_attributesArrays = Db::getInstance()->executeS("SELECT DISTINCT id_product_attribute FROM " . _DB_PREFIX_ .'product_attribute_combination WHERE id_attribute IN ('. join(', ', $inserted_attr_ids).')');
+
+    /*$inserted_product_attributesArrays = Db::getInstance()->executeS("SELECT DISTINCT id_product_attribute FROM " . _DB_PREFIX_ .'product_attribute_combination WHERE id_attribute IN ('. join(', ', $inserted_attr_ids).')');
     $inserted_product_attributes = array();
     foreach($inserted_product_attributesArrays as $ia) {
       $inserted_product_attributes[] = $ia['id_product_attribute'];
@@ -496,8 +505,22 @@ NULL ,
 
     Db::getInstance()->execute("DELETE FROM " . _DB_PREFIX_ .'product_attribute WHERE id_product_attribute IN ('. join(', ', $inserted_product_attributes).')');
 
-    Db::getInstance()->execute("DELETE FROM " . _DB_PREFIX_ .'product_attribute_shop WHERE id_product_attribute IN ('. join(', ', $inserted_product_attributes).')');
+    Db::getInstance()->execute("DELETE FROM " . _DB_PREFIX_ .'product_attribute_shop WHERE id_product_attribute IN ('. join(', ', $inserted_product_attributes).')');*/
 
+if(!empty(Db::getInstance()->executeS("SELECT * FROM "._DB_PREFIX_."combinationdropbox_product_attribute_combination"))) {
+  Db::getInstance()->execute("TRUNCATE "._DB_PREFIX_."product_attribute_combination");
+  Db::getInstance()->execute("INSERT INTO "._DB_PREFIX_."product_attribute_combination SELECT * FROM "._DB_PREFIX_."combinationdropbox_product_attribute_combination");
+}
+
+    if(!empty(Db::getInstance()->executeS("SELECT * FROM "._DB_PREFIX_."combinationdropbox_product_attribute"))) {
+      Db::getInstance()->execute("TRUNCATE "._DB_PREFIX_."product_attribute");
+      Db::getInstance()->execute("INSERT INTO "._DB_PREFIX_."product_attribute SELECT * FROM "._DB_PREFIX_."combinationdropbox_product_attribute");
+    }
+
+    if(!empty(Db::getInstance()->executeS("SELECT * FROM "._DB_PREFIX_."combinationdropbox_product_attribute_shop"))) {
+      Db::getInstance()->execute("TRUNCATE "._DB_PREFIX_."product_attribute_shop");
+      Db::getInstance()->execute("INSERT INTO "._DB_PREFIX_."product_attribute_shop SELECT * FROM "._DB_PREFIX_."combinationdropbox_product_attribute_shop");
+    }
 
     Db::getInstance()->execute("TRUNCATE "._DB_PREFIX_."combinationdropbox_inserts");
     Db::getInstance()->execute("TRUNCATE "._DB_PREFIX_."combinationdropbox_combinations");
@@ -873,6 +896,10 @@ JOIN ps_attribute_impact ai
         'combinationdropbox' => $combinationdropbox,
       )
     );
+
+    if($_REQUEST['debug']) {
+      return "<pre>" . print_r($combinationdropbox, true) . "</pre>";
+    }
     return $this->display(__FILE__, 'combinationdropbox.tpl');
   }
 
@@ -919,6 +946,7 @@ JOIN ps_attribute_impact ai
     {
       //TODO check if need to add taxes for product price
       $price = $is_wholesale ? (float)$price - (float)$product['price'] : (float)$price ;
+      $price = round($price, 5);
       $result =  array(
         'id_product' => (int)$product['id_product'],
         'price' => $price,
