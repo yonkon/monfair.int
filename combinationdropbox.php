@@ -31,13 +31,15 @@ class CombinationDropbox extends Module {
   public static $wholesaleAttributeNames = array(
     'Front_Wheel_Fender', 'Left_Side' , 'Right_Side' , 'Nose_Fairings' , 'Tail_Section' , 'Left_and_Right_Full'
   );
+  public static $backupTables = array('product_attribute', 'product_attribute_combination', 'product_attribute_shop');
+
 
 
   public function __construct()
   {
     $this->name = 'combinationdropbox';
     $this->tab = 'front_office_features';
-    $this->version = '0.5';
+    $this->version = '0.6';
     $this->author = 'Vladimir Sudarkov';
     $this->need_instance = 0;
     $this->ps_versions_compliancy = array('min' => '1.5', 'max' => '1.7');
@@ -86,28 +88,23 @@ class CombinationDropbox extends Module {
       if (!(Db::getInstance()->execute($sql) && Db::getInstance()->execute($sql2)) ) {
         return false;
       }
-      $sql1 = "DROP TABLE IF EXISTS ps_combinationdropbox_product_attribute";
-      $sql2 = "CREATE TABLE ps_combinationdropbox_product_attribute SELECT * FROM ps_product_attribute";
-      if (!(Db::getInstance()->execute($sql1) &&
-          Db::getInstance()->execute($sql2))) {
-        return false;
-      }
-      $sql1 = "DROP TABLE IF EXISTS ps_combinationdropbox_product_attribute_combination";
-      $sql2 = "CREATE TABLE ps_combinationdropbox_product_attribute_combination SELECT * FROM ps_product_attribute_combination";
-      if (!(Db::getInstance()->execute($sql1) && Db::getInstance()->execute($sql2)) ) {
-        return false;
-      }
-      $sql1 = "DROP TABLE IF EXISTS ps_combinationdropbox_product_attribute_shop";
-      $sql2 = "CREATE TABLE ps_combinationdropbox_product_attribute_shop SELECT * FROM ps_product_attribute_shop";
-      if (!(Db::getInstance()->execute($sql1) && Db::getInstance()->execute($sql2)) ) {
-        return false;
-      }
 
+      foreach(self::$backupTables as $tbl) {
+        $sql1 = "DROP TABLE IF EXISTS " ._DB_PREFIX_. "combinationdropbox_{$tbl}";
+        $sql2 = "CREATE TABLE " ._DB_PREFIX_. "combinationdropbox_{$tbl} SELECT * FROM " ._DB_PREFIX_. "{$tbl}";
+        if (!(Db::getInstance()->execute($sql1) &&
+          Db::getInstance()->execute($sql2))) {
+          return false;
+        } else {
+          Db::getInstance()->execute("TRUNCATE " ._DB_PREFIX_. "{$tbl}");
+        }
+      }
 
       $res = parent::install() &&
         $this->registerHook('COMBINATIONDROPBOX') &&
         $this->registerHook('header') &&
         $this->registerHook('actionProductAdd') &&
+        $this->registerHook('actionProductUpdateAttributeImpacts') &&
         Configuration::updateValue('COMBINATIONDROPBOX_NAME', 'Combination Dropbox');
 
       $comb_inserted = array();
@@ -323,6 +320,7 @@ WHERE 1
         }
 
         $address = $this->context->shop->getAddress();
+
         foreach ($productsAll as $product) {
           $tax_manager = TaxManagerFactory::getManager($address, 1);
           $product_tax_calculator = $tax_manager->getTaxCalculator();
@@ -421,12 +419,16 @@ NULL ,
         }
         $productObj = new Product($product['id_product']);
         $productObj->generateMultipleCombinations($values, $combinations);
-
       }
+
+      //TODO check if nessesary to remain old combinations
+/*      foreach (self::$backupTables as $tbl) {
+        $sql = "INSERT INTO " ._DB_PREFIX_. "{$tbl} SELECT * FROM `" ._DB_PREFIX_. "combinationdropbox{$tbl}`";
+      }*/
 
 
       //Setting default combinations
-      $zeroCombs = Db::getInstance()->executeS("SELECT * FROM ps_product_attribute GROUP BY id_product HAVING wholesale_price=0 ORDER BY price DESC");
+      $zeroCombs = Db::getInstance()->executeS("SELECT * FROM ps_product_attribute GROUP BY id_product ORDER BY price ASC");
       foreach ($zeroCombs as $zeroComb) {
         Db::getInstance()->update('product_shop', array(
           'cache_default_attribute' => $zeroComb['id_product_attribute'],
@@ -593,7 +595,7 @@ JOIN ps_attribute_group_lang agl
       $product->generateMultipleCombinations($values, $combinations_clear);
 
       //Setting default combinations
-      $zeroCombs = Db::getInstance()->executeS("SELECT * FROM " . _DB_PREFIX_. "product_attribute WHERE price=0 AND id_product={$id_product}");
+      $zeroCombs = Db::getInstance()->executeS("SELECT * FROM ps_product_attribute GROUP BY id_product HAVING wholesale_price=0  AND id_product={$id_product} ORDER BY price DESC");
 
       foreach($zeroCombs as $zeroComb) {
         Db::getInstance()->update('product_shop', array(
@@ -631,6 +633,57 @@ JOIN ps_attribute_group_lang agl
         Db::getInstance()->execute($sql);
       }
 
+    } catch(Exception $e) {
+      if(Tools::getValue('debug')) {
+        echo $e->getMessage();
+      }
+    }
+  }
+
+  public function hookActionProductUpdateAttributeImpacts(&$params)
+  {
+    /**
+     * @var $product Product
+     * @var $id_product integer
+     * @var $old_price float
+     */
+    $context = Context::getContext();
+    $product = $params['product'];
+    $id_product = $params['id_product'];
+    $old_price = $params['old_price'];
+    if ($old_price == $product->price) {
+      return;
+  }
+    $comb_inserted = array();
+    $wholesaleAttributes = self::getWholesaleAttributes();
+    $product_attributes_grouped = array();
+    $product_attributes = Db::getInstance()->executeS(
+"SELECT * FROM ps_product_attribute ppa
+JOIN ps_product_attribute_combination ppac
+ ON ppac.id_product_attribute = ppa.id_product_attribute
+ AND ppa.id_product = {$id_product}
+"
+    );
+    foreach($product_attributes as $pa ) {
+      $product_attributes_grouped[$pa['id_product_attribute']]['values'] = $pa;
+      $product_attributes_grouped[$pa['id_product_attribute']]['attributes'][] = $pa['id_attribute'];
+    }
+    foreach($product_attributes_grouped as $id_pa => $pa) {
+      foreach($pa['attributes'] as $attr_id) {
+        if(in_array($attr_id, $wholesaleAttributes) ) {
+          $new_impact = $pa['values']['price'] + $old_price - $product->price;
+          Db::getInstance()->update('product_attribute', array('price' => $new_impact), " id_product_attribute = {$id_pa}");
+          Db::getInstance()->update('product_attribute_shop', array('price' => $new_impact), " id_product_attribute = {$id_pa}");
+          break;
+        }
+      }
+    }
+
+
+    try {
+      if(isset($old_price) && $old_price !== false) {
+
+      }
     } catch(Exception $e) {
       if(Tools::getValue('debug')) {
         echo $e->getMessage();
@@ -922,7 +975,7 @@ JOIN ps_attribute_group_lang al
     if(!empty(self::$wholesaleAttributes)) {
       return self::$wholesaleAttributes;
     }
-
+    $wsaSqlNames = self::$wholesaleAttributeNamesSql;
     $wsa = Db::getInstance()->executeS(
 "SELECT a.id_attribute, g.id_attribute_group, gl.name AS `group`, gl.public_name AS `name`, al.name as `value`
  FROM ps_attribute a
@@ -935,7 +988,7 @@ JOIN ps_attribute_group g
 JOIN ps_attribute_group_lang gl
   ON g.id_attribute_group = gl.id_attribute_group
   AND gl.id_lang = 1
-WHERE gl.name IN ({self::$wholesaleAttributeNamesSql})
+WHERE gl.name IN ({$wsaSqlNames })
 "
     );
     $result = array();
