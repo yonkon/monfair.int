@@ -61,6 +61,7 @@ class CombinationDropbox extends Module {
       $this->warning = $this->l('No name provided');
   }
 
+
   public function install()
   {
     if (Shop::isFeatureActive())
@@ -103,12 +104,26 @@ class CombinationDropbox extends Module {
         }
       }
 
+
+
       $res = parent::install() &&
         $this->registerHook('COMBINATIONDROPBOX') &&
         $this->registerHook('header') &&
         $this->registerHook('actionProductAdd') &&
         $this->registerHook('actionProductUpdateAttributeImpacts') &&
         Configuration::updateValue('COMBINATIONDROPBOX_NAME', 'Combination Dropbox');
+
+      $tab = new Tab('Combinationdropbox');
+      $tab->active = 1;
+      $tab->name = array();
+      $tab->class_name = 'AdminCombinationdropbox';
+
+      foreach (Language::getLanguages(true) as $lang) {
+        $tab->name[$lang['id_lang']] = 'combinationdropboxInstall';
+      }
+      $tab->id_parent = -1;
+      $tab->module = 'combinationdropbox';
+      $res = $res && $tab->add();
 
       $comb_inserted = array();
       $attr_gr_content = array();
@@ -325,6 +340,9 @@ WHERE 1
         $address = $this->context->shop->getAddress();
 
         foreach ($productsAll as $product) {
+          /*if($product['id_product'] == 46) {
+            continue;
+          }*/
           $tax_manager = TaxManagerFactory::getManager($address, 1);
           $product_tax_calculator = $tax_manager->getTaxCalculator();
           $tax_excl = round($product_tax_calculator->removeTaxes(self::$productOptionsImpacts[$name]), 5);
@@ -399,6 +417,9 @@ NULL ,
       Db::getInstance()->execute($comb_comb_sql);
 
       foreach ($productsAll as $product) {
+       /* if($product['id_product'] >= 43) {
+            continue;
+          }*/
         $combination_values = array();
         $attr_gr_content_w_existed = empty($existed_attrs[$product['id_product']]) ?
           $attr_gr_content :
@@ -423,7 +444,9 @@ NULL ,
           $values[] = self::addAttribute($product, $combination, $combination_value);
         }
         $productObj = new Product($product['id_product']);
-        if($productObj->id) {
+        if(!empty($productObj->id) && $productObj->id > 41) {
+          if(empty($_REQUEST['debug']))
+            echo "<pre>{$product['id_product']}</pre>";
           $productObj->generateMultipleCombinations($values, $combinations);
         }
       }
@@ -435,11 +458,12 @@ NULL ,
 
 
       //Setting default combinations
-      $zeroCombs = Db::getInstance()->executeS("SELECT * FROM ps_product_attribute GROUP BY id_product HAVING price >= 0 ORDER BY price ASC");
+//      $zeroCombs = Db::getInstance()->executeS("SELECT * FROM ps_product_attribute GROUP BY id_product HAVING price >= 0 ORDER BY price ASC");
+      $zeroCombs = array();
       foreach ($zeroCombs as $zeroComb) {
         Db::getInstance()->update('product_shop', array(
           'cache_default_attribute' => $zeroComb['id_product_attribute'],
-        ), 'id_product = ' . (int)$zeroComb['id_product'] . Shop::addSqlRestriction());
+        ), 'id_product = ' . (int)$zeroComb['id_product'] . ' '.Shop::addSqlRestriction());
 
         Db::getInstance()->update('product', array(
           'cache_default_attribute' => $zeroComb['id_product_attribute'],
@@ -469,8 +493,7 @@ NULL ,
         return false;
       }
     } catch (Exception $e) {
-      $dbg = Tools::getValue('debug');
-      if($dbg) {
+      if(empty($_REQUEST['debug '])) {
         echo $e->getMessage();
       }
       $this->uninstall();
@@ -619,7 +642,6 @@ JOIN ps_attribute_group_lang agl
 
       //Setting default combinations
       $zeroCombs = Db::getInstance()->executeS("SELECT * FROM ps_product_attribute GROUP BY id_product HAVING wholesale_price=0  AND id_product={$id_product} ORDER BY price DESC");
-
       foreach($zeroCombs as $zeroComb) {
         Db::getInstance()->update('product_shop', array(
           'cache_default_attribute' => $zeroComb['id_product_attribute'],
@@ -657,7 +679,7 @@ JOIN ps_attribute_group_lang agl
       }
 
     } catch(Exception $e) {
-      if(Tools::getValue('debug')) {
+      if(!empty($_REQUEST['debug '])) {
         echo $e->getMessage();
       }
     }
@@ -702,21 +724,11 @@ JOIN ps_product_attribute_combination ppac
       }
     }
 
-
-    try {
-      if(isset($old_price) && $old_price !== false) {
-
-      }
-    } catch(Exception $e) {
-      if(Tools::getValue('debug')) {
-        echo $e->getMessage();
-      }
-    }
   }
 
-  public function getContent2()
+  public function getContent()
   {
-    $output = null;
+    $output = Context::getContext()->link->getAdminLink('AdminCombinationdropboxController').'&ajax=1';
 
     if (Tools::isSubmit('submit'.$this->name))
     {
@@ -897,7 +909,7 @@ JOIN ps_attribute_impact ai
       )
     );
 
-    if($_REQUEST['debug']) {
+    if(!empty($_REQUEST['debug'])) {
       return "<pre>" . print_r($combinationdropbox, true) . "</pre>";
     }
     return $this->display(__FILE__, 'combinationdropbox.tpl');
@@ -913,7 +925,8 @@ JOIN ps_attribute_impact ai
   protected static function createCombinations($list)
   {
     if (count($list) <= 1)
-      return count($list) ? array_map(create_function('$v', 'return (array($v));'), $list[0]) : $list;
+//      return count($list) ? array_map(create_function('$v', 'return (array($v));'), $list[0]) : $list;
+      return count($list) ? array_map('enarray', $list[0]) : $list;
     $res = array();
     $first = array_pop($list);
     foreach ($first as $attribute)
@@ -1026,4 +1039,8 @@ WHERE gl.name IN ({$wsaSqlNames })
     return $result;
   }
 
+}
+
+function enarray($v) {
+  return (array($v));
 }

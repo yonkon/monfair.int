@@ -1,5 +1,6 @@
 <!-- Block combinationdropbox -->
 {if !empty($combinationdropbox)}
+  <div class="combinationdropbox">
   <div class="cdb_section individual">
     <div class="select">{$combinationdropbox.individual.section_name}
     </div>
@@ -28,6 +29,7 @@
     </div>
   </div>
   <div style="float: none; clear: both"></div>
+  </div>
   <script type="text/javascript">
     {literal}
     $(document).ready(function(){

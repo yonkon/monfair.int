@@ -73,11 +73,14 @@
   display: inline-block;
 }
 
+#buy_block .cdb_section .dropbox label,
 .cdb_section label {
   font-weight: normal;
   width: 100%;
   color: #777;
   margin-bottom: 8px;
+  text-align: left;
+  float: none;
 }
 
 .cdb_section input {
@@ -100,3 +103,9 @@
 .individual .select {
   margin-left: 0;
 }
+
+.combinationdropbox {
+  width: 410px;
+}
+
+
