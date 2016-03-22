@@ -61,6 +61,34 @@ class CombinationDropbox extends Module {
       $this->warning = $this->l('No name provided');
   }
 
+  public static function getAttributeImpact($attr)
+  {
+    if(isset(self::$attributeImpacts[$attr])) {
+      return self::$attributeImpacts[$attr];
+    }
+    $attrNamesSql = array();
+    foreach(self::$productOptionsNames as $name=>$pub) {
+      $attrNamesSql[] = "'{$name}'";
+    }
+    $attrNamesSql = join(', ', $attrNamesSql);
+    $sql = "SELECT i.id_attribute, i.price
+FROM ps_attribute_impact i
+JOIN ps_attribute_lang l
+  ON l.id_lang=1
+  AND l.id_attribute = i.id_attribute
+  AND l.name IN ({$attrNamesSql})
+  GROUP BY i.id_attribute";
+    $ais = Db::getInstance()->executeS($sql);
+    foreach($ais as $ai) {
+      self::$attributeImpacts[$ai['id_attribute']] = $ai['price'];
+    }
+    if(!isset(self::$attributeImpacts[$attr])) {
+      return 0;
+    } else {
+      return self::$attributeImpacts[$attr];
+    }
+  }
+
 
   public function install()
   {
@@ -68,7 +96,6 @@ class CombinationDropbox extends Module {
       Shop::setContext(Shop::CONTEXT_ALL);
 
     try {
-
       //combinationdropbox_inserts
       $sql = "CREATE TABLE IF NOT EXISTS `" . _DB_PREFIX_ . "combinationdropbox_inserts` (
   `id_combinationdropbox_insert` int(11) NOT NULL AUTO_INCREMENT,
@@ -642,6 +669,7 @@ JOIN ps_attribute_group_lang agl
 
       //Setting default combinations
       $zeroCombs = Db::getInstance()->executeS("SELECT * FROM ps_product_attribute GROUP BY id_product HAVING wholesale_price=0  AND id_product={$id_product} ORDER BY price DESC");
+
       foreach($zeroCombs as $zeroComb) {
         Db::getInstance()->update('product_shop', array(
           'cache_default_attribute' => $zeroComb['id_product_attribute'],
@@ -728,7 +756,7 @@ JOIN ps_product_attribute_combination ppac
 
   public function getContent()
   {
-    $output = Context::getContext()->link->getAdminLink('AdminCombinationdropboxController').'&ajax=1';
+    $output = Context::getContext()->link->getAdminLink('AdminCombinationdropboxController').'';
 
     if (Tools::isSubmit('submit'.$this->name))
     {
@@ -922,7 +950,7 @@ JOIN ps_attribute_impact ai
   }
 
 
-  protected static function createCombinations($list)
+  public static function createCombinations($list)
   {
     if (count($list) <= 1)
 //      return count($list) ? array_map(create_function('$v', 'return (array($v));'), $list[0]) : $list;
@@ -945,7 +973,7 @@ JOIN ps_attribute_impact ai
    * @param int $weight float Combination weight impact
    * @return array Values for generateMultipleCombinations
    */
-  protected static function addAttribute($product, $attributes, $price = 0, $weight = 0)
+  public static function addAttribute($product, $attributes, $price = 0, $weight = 0)
   {
     $wholesale_ids = self::getWholesaleAttributes();
     $is_wholesale = false;

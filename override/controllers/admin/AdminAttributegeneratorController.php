@@ -2,7 +2,7 @@
 
 
 
-class AdminAttributegeneratorController extends  AdminAttributeGeneratorControllerCore
+class AdminAttributeGeneratorController extends  AdminAttributeGeneratorControllerCore
 {
 
   protected function addAttribute($attributes, $price = 0, $weight = 0)
