@@ -133,14 +133,14 @@
     <h3>Products per script execution</h3>
     <div>
       Current value: <b>
-        {if empty($cdbx.length_pid)}Not set (default: {$CDBX_LENGTH_PID})
+        {if empty($cdbx.length_pid)}Not set (default: {$cdbx.CDBX_LENGTH_PID})
         {else}{$cdbx.length_pid}
         {/if}
       </b>
 
       <div>
         <label>Set value
-          <input type="number" name="CDBX_PID_CHUNK_LENGTH" value="{$cdbx.length_pid|default:$CDBX_LENGTH_PID}">
+          <input type="number" name="CDBX_PID_CHUNK_LENGTH" value="{$cdbx.length_pid|default:$cdbx.CDBX_LENGTH_PID}">
         </label>
       </div>
     </div>

@@ -38,7 +38,7 @@ class AdminCombinationdropboxController extends ModuleAdminControllerCore
         $max_pid= (int)$max_pid[0]['max_pid'];
       }
     } else {
-      $max_pid = $_REQUEST['CDBX_MAX_PID'];
+      $max_pid = (int)$_REQUEST['CDBX_MAX_PID'];
     }
     Configuration::updateValue('CDBX_MAX_PID', $max_pid);
 

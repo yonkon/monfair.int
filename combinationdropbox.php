@@ -10,6 +10,7 @@ ini_set('max_execution_time', 360000);
 
 class CombinationDropbox extends Module {
 
+  public static $length_pid = 5;
   public static $productOptionsNames = array(
     'Front_Wheel_Fender'  => 'Front Wheel Fender',
     'Left_Side'           => 'Left Side',
@@ -42,7 +43,7 @@ class CombinationDropbox extends Module {
   {
     $this->name = 'combinationdropbox';
     $this->tab = 'front_office_features';
-    $this->version = '0.7';
+    $this->version = '0.9';
     $this->author = 'Vladimir Sudarkov';
     $this->need_instance = 0;
     $this->ps_versions_compliancy = array('min' => '1.5', 'max' => '1.7');
@@ -555,18 +556,18 @@ NULL ,
     Db::getInstance()->execute("DELETE FROM " . _DB_PREFIX_ .'product_attribute WHERE id_product_attribute IN ('. join(', ', $inserted_product_attributes).')');
 
     Db::getInstance()->execute("DELETE FROM " . _DB_PREFIX_ .'product_attribute_shop WHERE id_product_attribute IN ('. join(', ', $inserted_product_attributes).')');*/
-
-if(!empty(Db::getInstance()->executeS("SELECT * FROM "._DB_PREFIX_."combinationdropbox_product_attribute_combination"))) {
+    $pac=Db::getInstance()->executeS("SELECT * FROM "._DB_PREFIX_."combinationdropbox_product_attribute_combination");
+if(!empty($pac)) {
   Db::getInstance()->execute("TRUNCATE "._DB_PREFIX_."product_attribute_combination");
   Db::getInstance()->execute("INSERT INTO "._DB_PREFIX_."product_attribute_combination SELECT * FROM "._DB_PREFIX_."combinationdropbox_product_attribute_combination");
 }
-
-    if(!empty(Db::getInstance()->executeS("SELECT * FROM "._DB_PREFIX_."combinationdropbox_product_attribute"))) {
+$pa=Db::getInstance()->executeS("SELECT * FROM "._DB_PREFIX_."combinationdropbox_product_attribute");
+    if(!empty($pa)) {
       Db::getInstance()->execute("TRUNCATE "._DB_PREFIX_."product_attribute");
       Db::getInstance()->execute("INSERT INTO "._DB_PREFIX_."product_attribute SELECT * FROM "._DB_PREFIX_."combinationdropbox_product_attribute");
     }
-
-    if(!empty(Db::getInstance()->executeS("SELECT * FROM "._DB_PREFIX_."combinationdropbox_product_attribute_shop"))) {
+$pas = Db::getInstance()->executeS("SELECT * FROM "._DB_PREFIX_."combinationdropbox_product_attribute_shop");
+    if(!empty($pas)) {
       Db::getInstance()->execute("TRUNCATE "._DB_PREFIX_."product_attribute_shop");
       Db::getInstance()->execute("INSERT INTO "._DB_PREFIX_."product_attribute_shop SELECT * FROM "._DB_PREFIX_."combinationdropbox_product_attribute_shop");
     }
@@ -755,30 +756,31 @@ JOIN ps_product_attribute_combination ppac
 
   public function getContent()
   {
-    $output = Context::getContext()->link->getAdminLink('AdminCombinationdropboxController').'';
-
-    if (Tools::isSubmit('submit'.$this->name))
-    {
-      $la_tabcount = strval(Tools::getValue('COMBINATIONDROPBOX_TABCOUNT'));
-      if (!$la_tabcount  || empty($la_tabcount) || !Validate::isGenericName($la_tabcount))
-        $output .= $this->displayError( $this->l('Invalid Configuration value') );
-      else
-      {
-        Configuration::updateValue('COMBINATIONDROPBOX_TABCOUNT', intval($la_tabcount));
-        $output .= $this->displayConfirmation($this->l('Settings updated'));
-      }
-
-      $la_itemcount = strval(Tools::getValue('COMBINATIONDROPBOX_ITEMCOUNT'));
-      if (!$la_itemcount  || empty($la_itemcount) || !Validate::isGenericName($la_itemcount))
-        $output .= $this->displayError( $this->l('Invalid Configuration value') );
-      else
-      {
-        Configuration::updateValue('COMBINATIONDROPBOX_ITEMCOUNT', intval($la_itemcount));
-        $output .= $this->displayConfirmation($this->l('Settings updated'));
-      }
-
-    }
-    return $output.$this->displayForm();
+    Tools::redirectAdmin(Context::getContext()->link->getAdminLink('AdminCombinationdropbox'));
+//    $output = Context::getContext()->link->getAdminLink('AdminCombinationdropboxController').'';
+//
+//    if (Tools::isSubmit('submit'.$this->name))
+//    {
+//      $la_tabcount = strval(Tools::getValue('COMBINATIONDROPBOX_TABCOUNT'));
+//      if (!$la_tabcount  || empty($la_tabcount) || !Validate::isGenericName($la_tabcount))
+//        $output .= $this->displayError( $this->l('Invalid Configuration value') );
+//      else
+//      {
+//        Configuration::updateValue('COMBINATIONDROPBOX_TABCOUNT', intval($la_tabcount));
+//        $output .= $this->displayConfirmation($this->l('Settings updated'));
+//      }
+//
+//      $la_itemcount = strval(Tools::getValue('COMBINATIONDROPBOX_ITEMCOUNT'));
+//      if (!$la_itemcount  || empty($la_itemcount) || !Validate::isGenericName($la_itemcount))
+//        $output .= $this->displayError( $this->l('Invalid Configuration value') );
+//      else
+//      {
+//        Configuration::updateValue('COMBINATIONDROPBOX_ITEMCOUNT', intval($la_itemcount));
+//        $output .= $this->displayConfirmation($this->l('Settings updated'));
+//      }
+//
+//    }
+//    return $output.$this->displayForm();
   }
 
   public function displayForm()
