@@ -131,8 +131,6 @@ JOIN ps_attribute_lang l
         }
       }
 
-
-
       $res = parent::install() &&
         $this->registerHook('COMBINATIONDROPBOX') &&
         $this->registerHook('header') &&
@@ -450,8 +448,9 @@ NULL ,
         $combination_values = array();
         $attr_gr_content_w_existed = empty($existed_attrs[$product['id_product']]) ?
           $attr_gr_content :
-          array_merge($attr_gr_content, array_values($existed_attrs[$product['id_product']]) );
-        $combinations = array_values(self::createCombinations($attr_gr_content_w_existed));
+          array_replace($attr_gr_content, $existed_attrs[$product['id_product']] );
+//          array_merge($attr_gr_content, array_values($existed_attrs[$product['id_product']]) );
+        $combinations = array_values(self::createCombinations(array_values($attr_gr_content_w_existed)));
         $combinations = array_reverse($combinations);
         foreach ($combinations as $i => $attrs) {
           $combination_values[$i] = 0;
@@ -1064,6 +1063,7 @@ WHERE gl.name IN ({$wsaSqlNames })
     foreach($wsa as $row) {
       $result[] = $row['id_attribute'];
     }
+    self::$wholesaleAttributes = $result;
     return $result;
   }
 

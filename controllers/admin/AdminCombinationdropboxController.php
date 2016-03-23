@@ -18,66 +18,89 @@ class AdminCombinationdropboxController extends ModuleAdminControllerCore
 
 
   public function postProcess() {
-    $processing = ConfigurationCore::get('CDBX_PROCESSING');
+    $processing = Configuration::get('CDBX_PROCESSING');
     if(empty($processing)) {
       $processing = false;
     }
-    $start_pid = empty($_REQUEST['CDBX_START_PID']) ? ConfigurationCore::get('CDBX_START_PID') : $_REQUEST['CDBX_START_PID'];
+    $start_pid = empty($_REQUEST['CDBX_START_PID']) ? Configuration::get('CDBX_START_PID') : $_REQUEST['CDBX_START_PID'];
     $start_pid = empty($start_pid)? 0 : (int) $start_pid;
-    $length_pid = empty($_REQUEST['CDBX_PID_CHUNK_LENGTH']) ? ConfigurationCore::get('CDBX_PID_CHUNK_LENGTH') : $_REQUEST['CDBX_PID_CHUNK_LENGTH'];
+    Configuration::updateValue('CDBX_START_PID', $start_pid);
+
+    $length_pid = empty($_REQUEST['CDBX_PID_CHUNK_LENGTH']) ? Configuration::get('CDBX_PID_CHUNK_LENGTH') : $_REQUEST['CDBX_PID_CHUNK_LENGTH'];
     $length_pid = empty($length_pid)? self::CDBX_LENGTH_PID : (int)$length_pid;
-    $end_pid = $start_pid + $length_pid;
+    Configuration::updateValue('CDBX_PID_CHUNK_LENGTH', $length_pid);
+
+    $last_pid = Configuration::get('CDBX_LAST_PID');
     if (empty($_REQUEST['CDBX_MAX_PID']) ) {
-      $max_pid = Db::getInstance()->executeS("SELECT MAX(id_product) as max_pid FROM ps_product");
-      $max_pid= (int)$max_pid[0]['max_pid'];
+      $max_pid = Configuration::get('CDBX_MAX_PID');
+      if(empty($max_pid)) {
+        $max_pid = Db::getInstance()->executeS("SELECT MAX(id_product) as max_pid FROM ps_product");
+        $max_pid= (int)$max_pid[0]['max_pid'];
+      }
     } else {
       $max_pid = $_REQUEST['CDBX_MAX_PID'];
     }
+    Configuration::updateValue('CDBX_MAX_PID', $max_pid);
 
-    if(empty($_REQUEST['display'])) {
-      if(!$processing) {
-        ConfigurationCore::set('CDBX_PROCESSING', 1);
-        $last_pid = $this->processGeneration($start_pid, $length_pid, $max_pid);
-        if($last_pid && empty($this->generationException)) {
-          ConfigurationCore::set('CDBX_PROCESSING', 0);
-          if($processing == 1) {
-            if( $curl = curl_init() ) {
-              $url = $this->context->link->getAdminLink('AdminCombinationdropboxController');
-              curl_setopt($curl, CURLOPT_URL, $url);
-              curl_setopt($curl, CURLOPT_RETURNTRANSFER,true);
-              curl_setopt($curl, CURLOPT_POST, true);
-              curl_setopt($curl, CURLOPT_POSTFIELDS, array(
-                'CDBX_START_PID' => $last_pid+1,
-                'CDBX_MAX_PID' => $max_pid,
-                'CDBX_PID_CHUNK_LENGTH' => $length_pid
-              ));
-              $out = curl_exec($curl);
-              if(ConfigurationCore::get('CDBX_DEBUG') ) {
-                echo $out;
+    if(!empty($_REQUEST['process']) && ($_REQUEST['process'] == 1) ) {
+        if (empty($processing) || $processing<1) {
+          Configuration::updateValue('CDBX_PROCESSING', 1);
+          $last_pid = $this->processGeneration($start_pid, $length_pid, $max_pid);
+          if ($last_pid && empty($this->generationException)) {
+            Configuration::updateValue('CDBX_START_PID', $last_pid+1);
+            Configuration::updateValue('CDBX_LAST_PID', $last_pid);
+            Configuration::updateValue('CDBX_PROCESSING', 0);
+            if ($processing != -1) {
+              if ($curl = curl_init()) {
+                $url = $this->context->link->getAdminLink('AdminCombinationdropboxController');
+                curl_setopt($curl, CURLOPT_URL, $url);
+                curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($curl, CURLOPT_POST, true);
+                curl_setopt($curl, CURLOPT_POSTFIELDS, array(
+                  'CDBX_START_PID' => $last_pid + 1,
+                  'CDBX_MAX_PID' => $max_pid,
+                  'CDBX_PID_CHUNK_LENGTH' => $length_pid,
+                  'processing' => 1
+                ));
+                $out = curl_exec($curl);
+                if (Configuration::get('CDBX_DEBUG')) {
+                  echo $out;
+                }
+                curl_close($curl);
+                return true;
+              } else {
+                throw new Exception('Unable init cUrl');
               }
-              curl_close($curl);
-              return true;
-            } else {
-              throw new Exception('Unable init cUrl');
             }
+          } else {
+            if (empty($this->generationException)) {
+              echo 'Error on generation products combinations';
+            } else {
+              echo $this->generationException->getTraceAsString();
+            }
+            return false;
           }
         } else {
-          if(empty($this->generationException)) {
-            echo 'Error on generation products combinations';
-          } else {
-            echo $this->generationException->getTraceAsString();
-          }
-          return false;
+          echo 'processing';
+          die();
         }
-      } else {
-        echo 'processing';
-        die();
-      }
     } else {
+      if(!empty($_REQUEST['process']) && $_REQUEST['process'] == -1) {
+        $processing = -1;
+        Configuration::updateValue('CDBX_PROCESSING', $processing);
+      }
       $this->context->smarty->assign(array(
-        'max_pid' =>$max_pid,
-        'end_pid' => $end_pid
-      ));
+          'cdbx' => array(
+            'start_pid' => $start_pid,
+            'max_pid' => $max_pid,
+            'length_pid' => $length_pid,
+            'last_pid' => $last_pid,
+            'processing' => $processing,
+            'CDBX_LENGTH_PID' => self::CDBX_LENGTH_PID,
+            'progress' => empty($last_pid) ? 0 : round($max_pid/$last_pid, 1)
+          )
+        )
+      );
 
     }
   }
@@ -88,6 +111,7 @@ class AdminCombinationdropboxController extends ModuleAdminControllerCore
       Shop::setContext(Shop::CONTEXT_ALL);
 
     try {
+      $last_pid = false;
       $end_pid = false;
       $attr_gr_content = array();
       $sqlOptionNames = array();
@@ -100,17 +124,17 @@ class AdminCombinationdropboxController extends ModuleAdminControllerCore
       foreach (CombinationDropbox::$productOptionsNames as $name => $pubname) {
         $sqlOptionNames[] = "'{$name}'";
       }
-      $sql = "SELECT a.id_attribute, gl.id_attribute_group, gl.name, gl.public_name
+      $sql = "SELECT a.id_attribute, a.id_attribute_group, gl.name, gl.public_name
 FROM ps_attribute a
 JOIN ps_attribute_group_lang gl
 	ON gl.id_lang=1
-    AND ps_attribute_group_lang.id_attribute_group = ps_attribute.id_attribute_group
+    AND gl.id_attribute_group = a.id_attribute_group
     AND name IN (" . join(', ', $sqlOptionNames) . ")";
       $combinationdropboxAll = Db::getInstance()->executeS(
         $sql
       );
       foreach($combinationdropboxAll as $row) {
-        $attr_gr_content[$row['id_attribute_group']][] = $row['id_attribute'];
+        $attr_gr_content[$row['id_attribute_group']][$row['id_attribute']] = $row['id_attribute'];
       }
 
       $productsAll = Product::getProducts(1, 0, 0, 'id_product', 'ASC');
@@ -162,8 +186,8 @@ WHERE 1
         $combination_values = array();
         $attr_gr_content_w_existed = empty($existed_attrs[$product['id_product']]) ?
           $attr_gr_content :
-          array_merge($attr_gr_content, array_values($existed_attrs[$product['id_product']]) );
-        $combinations = array_values(CombinationDropbox::createCombinations($attr_gr_content_w_existed));
+          array_replace($attr_gr_content, $existed_attrs[$product['id_product']] );
+        $combinations = array_values(CombinationDropbox::createCombinations(array_values($attr_gr_content_w_existed) ) );
         $combinations = array_reverse($combinations);
         foreach ($combinations as $i => $attrs) {
           $combination_values[$i] = 0;
@@ -180,7 +204,13 @@ WHERE 1
         }
         $productObj = new Product($product['id_product']);
         if(!empty($productObj->id) ) {
-          $productObj->generateMultipleCombinations($values, $combinations);
+          if ($productObj->generateMultipleCombinations($values, $combinations)) {
+            $last_pid = $productObj->id;
+            Configuration::updateValue('CDBX_LAST_PID', $last_pid );
+          } else {
+            Configuration::updateValue('CDBX_PROCESSING', 0);
+            throw new Exception('Could not generate combinations for product #'.$productObj->id);
+          }
         }
       }
 
