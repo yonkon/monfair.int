@@ -442,10 +442,8 @@ NULL ,
       $comb_comb_sql = "INSERT INTO `" . _DB_PREFIX_ . "combinationdropbox_combinations`(`id`, `a1`, `a2`, `a3`, `a4`, `a5`, `a6`, `a7`, `price`) VALUES " . join(', ', $comb_combs);
       Db::getInstance()->execute($comb_comb_sql);
 
+/*
       foreach ($productsAll as $product) {
-       /* if($product['id_product'] >= 43) {
-            continue;
-          }*/
         $combination_values = array();
         $attr_gr_content_w_existed = empty($existed_attrs[$product['id_product']]) ?
           $attr_gr_content :
@@ -478,10 +476,6 @@ NULL ,
         }
       }
 
-      //TODO check if nessesary to remain old combinations
-/*      foreach (self::$backupTables as $tbl) {
-        $sql = "INSERT INTO " ._DB_PREFIX_. "{$tbl} SELECT * FROM `" ._DB_PREFIX_. "combinationdropbox{$tbl}`";
-      }*/
 
 
       //Setting default combinations
@@ -513,7 +507,7 @@ NULL ,
         ), 'id_product_attribute = ' . $zeroComb['id_product_attribute'] . ' AND id_product = ' . (int)$zeroComb['id_product']);
       }
 
-
+*/
 
       if (!$res) {
         $this->uninstall();

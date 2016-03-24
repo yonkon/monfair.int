@@ -64,7 +64,8 @@
 </style>
 <section class="combinationdropbox">
   <h2>Installation progress</h2>
-  <div class="progress">{$progress|default:0}%</div>
+  <div class="error">{$cdbx.error}</div>
+  <div class="progress" style="background-size: {$cdbx.progress}% 100%">{$cdbx.progress|default:0}%</div>
   <form method="post">
     <h3>Current processing state:</h3>
     Current value: <b>
