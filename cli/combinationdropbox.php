@@ -87,7 +87,8 @@ function processGeneration($start_pid, $cnt_pid, $max_pid)
   try {
     $end_pid = false;
 
-    $productsAll = Product::getProducts(1, 0, 0, 'id_product', 'ASC');
+//    $productsAll = Product::getProducts(1, 0, 0, 'id_product', 'ASC');
+    $productsAll = Db::getInstance()->executeS("SELECT id_product, price FROM ps_product WHERE id_product >= {$start_pid} ORDER BY id_product LIMIT {$cnt_pid}");
     $productChunk = array();
     $pcount = 0;
     foreach ($productsAll as $product) {
