@@ -4,9 +4,9 @@ if(!defined('_PS_VERSION_') )
 /*
  * updated 11.03.2016
  */
-ini_set('display_errors',1);
-error_reporting(E_ALL|E_STRICT);
-ini_set('max_execution_time', 360000);
+//ini_set('display_errors',1);
+//error_reporting(E_ALL|E_STRICT);
+//ini_set('max_execution_time', 360000);
 
 class CombinationDropbox extends Module {
 
@@ -943,3 +943,87 @@ function combinationdropboxRemoveConfigs() {
   Configuration::updateValue('CDBX_ERROR', null);
   Configuration::updateValue('CDBX_PID_CHUNK_LENGTH', null);
 }
+
+
+$sql = 'SELECT a.* FROM ps_product_attribute_combination c1
+  JOIN ps_product_attribute_combination c2
+    ON c2.id_attribute = 4 #left-side
+    AND c2.id_product_attribute = c1.id_product_attribute
+  JOIN ps_product_attribute_combination c3
+    ON c3.id_attribute = 6 #right side
+       AND c3.id_product_attribute = c1.id_product_attribute
+  JOIN ps_product_attribute_combination c4
+    ON c4.id_attribute = 8 #nose fairings
+       AND c4.id_product_attribute = c1.id_product_attribute
+  JOIN ps_product_attribute_combination c5
+    ON c5.id_attribute = 10 #tail section
+       AND c5.id_product_attribute = c1.id_product_attribute
+  JOIN ps_product_attribute_combination c6
+    ON c6.id_attribute = 12 #left+right full
+       AND c6.id_product_attribute = c1.id_product_attribute
+#  JOIN ps_product_attribute_combination c7
+#    ON c7.id_attribute = 14 #unpainted
+#       AND c7.id_product_attribute = c1.id_product_attribute
+#  JOIN ps_product_attribute_combination c8
+#    ON c8.id_attribute = 16 #seat cowl
+#       AND c8.id_product_attribute = c1.id_product_attribute
+  JOIN ps_product_attribute_combination c9
+    ON c9.id_attribute = 17 #bolt kit +
+       AND c9.id_product_attribute = c1.id_product_attribute
+  JOIN ps_product_attribute a
+    ON a.id_product_attribute = c1.id_product_attribute
+       WHERE c1.id_attribute = 2 #front wheel fender';
+
+
+"UPDATE ps_product_attribute pa
+SET pa.price = pa.price + 65/3
+WHERE pa.id_product_attribute IN
+  (SELECT c1.id_product_attribute FROM ps_product_attribute_combination c1
+    JOIN ps_product_attribute_combination c2
+      ON c2.id_attribute = 4
+      AND c2.id_product_attribute = c1.id_product_attribute
+    JOIN ps_product_attribute_combination c3
+      ON c3.id_attribute = 6
+      AND c3.id_product_attribute = c1.id_product_attribute
+    JOIN ps_product_attribute_combination c4
+      ON c4.id_attribute = 8
+      AND c4.id_product_attribute = c1.id_product_attribute
+    JOIN ps_product_attribute_combination c5
+      ON c5.id_attribute = 10
+      AND c5.id_product_attribute = c1.id_product_attribute
+    JOIN ps_product_attribute_combination c6
+      ON c6.id_attribute = 12
+      AND c6.id_product_attribute = c1.id_product_attribute
+    JOIN ps_product_attribute_combination c9
+      ON c9.id_attribute = 17
+      AND c9.id_product_attribute = c1.id_product_attribute
+  WHERE c1.id_attribute = 2)
+       ";
+
+"UPDATE  `ps_product_attribute_shop` a
+SET a.price = a.price + 65/3
+WHERE a.`id_product_attribute` IN (SELECT c1.`id_product_attribute` FROM ps_product_attribute_combination c1
+    JOIN ps_product_attribute_combination c2
+      ON c2.id_attribute = 4
+      AND c2.id_product_attribute = c1.id_product_attribute
+    JOIN ps_product_attribute_combination c3
+      ON c3.id_attribute = 6
+      AND c3.id_product_attribute = c1.id_product_attribute
+    JOIN ps_product_attribute_combination c4
+      ON c4.id_attribute = 8
+      AND c4.id_product_attribute = c1.id_product_attribute
+    JOIN ps_product_attribute_combination c5
+      ON c5.id_attribute = 10
+      AND c5.id_product_attribute = c1.id_product_attribute
+    JOIN ps_product_attribute_combination c6
+      ON c6.id_attribute = 12
+      AND c6.id_product_attribute = c1.id_product_attribute
+    JOIN ps_product_attribute_combination c9
+      ON c9.id_attribute = 17
+      AND c9.id_product_attribute = c1.id_product_attribute
+  WHERE c1.id_attribute = 2)
+       ";
+
+print 'cacheSomeAttributesLists';
+//print_r(self::$_attributesLists);
+die();

@@ -37,25 +37,33 @@
         //убираем выбор со всех полей дропбокса
         $('.cdb_section input[data-no]').removeClass('selected').removeAttr('checked');
         $('.cdb_section input[data-no]').parent().removeClass('checked');
-        $('#attributes').find('fieldset li input').each(function (i, e) {
-          var attr = $(e).val();
-          /*//Убираем выбор на включённом аттрибуте
-          if($('.cdb_section li[data-yes=' + attr + ']').length) {
-            $(e).parent().removeClass('checked');
-          } else { // Ставим галку на отключенном атрибуте
-            $(e).parent().addClass('checked');
-          }*/
-           //Код для выставления выбраных атрибутов в дропбокс
-          var checked = $(e).parent().hasClass('checked');
-          if (checked) {
-            $('.cdb_section input[data-yes=' + attr + ']').addClass('selected').attr('checked','checked');
-            $('.cdb_section input[data-yes=' + attr + ']').parent().addClass('checked');
-            $('.cdb_section input[data-no=' + attr + ']').removeClass('selected').removeAttr('checked');
-            $('.cdb_section input[data-no=' + attr + ']').parent().removeClass('checked');
+        $attr_pairs = $('.attribute_list ul');
+        $attr_pairs.each(function(i, pair) {
+          $li1 = $($('li', pair)[0]);
+          $input1 = $li1.find('input:radio');
+          $li2 = $($('li', pair)[1]);
+          $input2 = $li2.find('input:radio');
+
+          if($input1.attr('checked') == 'checked') {
+            $li1.addClass('checked');
+            $input1.parent().addClass('checked');
+            $input2.removeAttr('checked');
+            $input2.parent().removeClass('checked');
+            $li2.removeClass('checked');
+            attr = $input1.val();
+            $('.cdb_section input[data-no='+ attr +']').removeClass('selected').removeAttr('checked').parent().removeClass('checked');
+            $('.cdb_section input[data-yes='+ attr +']').addClass('selected').attr('checked', 'checked').parent().addClass('checked');
+            return;
           }
+          $input2.attr('checked', 'checked');
+          $li2.addClass('checked');
+          $input2.parent().addClass('checked');
+          attr = $input2.val();
+          $('.cdb_section input[data-no='+ attr +']').removeClass('selected').removeAttr('checked').parent().removeClass('checked');
+          $('.cdb_section input[data-yes='+ attr +']').addClass('selected').attr('checked', 'checked').parent().addClass('checked');
         });
-//        setTimeout(function() {$($('.cdb_section.painted li')[0]).click(); }, 1000);
-        $($('.cdb_section.painted li')[0]).click();
+
+        setTimeout(function() {$($('.cdb_section.painted li')[0]).click(); }, 1000);
       }, 1500 );
       {/literal}
       {foreach $combinationdropbox.individual.groups as $c }
@@ -73,15 +81,17 @@
         var y = $this.data('yes');
         var n = $this.data('no');
         $this.toggleClass('selected');
-//        var selected = $this.hasClass('selected');
-        var selected = !$this.parent().hasClass('checked');
+        var selected = $this.hasClass('selected');
+//        var selected = !$this.parent().hasClass('checked');
         $('input[name=group_'+gr+']').removeAttr('checked');
         $('input[name=group_'+gr+']').parent().removeClass('checked');
         if(selected) {
+          $this.parent().addClass('checked');
           $('input[value=' + y + ']').parent().addClass('checked');
           $('input[value=' + y + ']').attr('checked','checked');
           findCombination();
         } else {
+          $this.parent().removeClass('checked');
           $('input[value=' + n + ']').parent().addClass('checked');
           $('input[value=' + n + ']').attr('checked','checked');
           findCombination();
